@@ -21,13 +21,22 @@ var wallTiles;
 var nonColTiles = [];
 function preload(){
 	this.load.image('tankBody','assets/tankBody.png');
+	this.load.image('tankHead','assets/tankHead.png');
 	this.load.image('tiles','assets/moreTiles.png');
 	this.load.tilemapTiledJSON('level1', 'assets/map.json');
 }
 
 function create(){
 	let self = this;
+
 	this.keys = this.input.keyboard.createCursorKeys();
+	this.wasd = {
+	  up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+	  down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+	  left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+	  right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+	};
+
 	this.socket = io.connect();
 	
 	this.map = this.add.tilemap('level1');
@@ -42,33 +51,48 @@ function create(){
 	}
 	//this.walls.setCollisionByExclusion(nonColTiles,true);
 	this.map.setCollisionBetween(1, 999, true, 'walls');
-	this.t = this.physics.add.sprite(200,200,'tankBody');
+	this.t = this.physics.add.sprite(200,200,'tankBody').setOrigin(0.5,0.55);
+	this.h = this.physics.add.sprite(this.t.x,this.t.y,'tankHead').setOrigin(0.5,34/42);
 	this.cameras.main.startFollow(this.t);
 	//this.cameras.main.startFollow(this.t,false,1,1,-1 * config.width/2 +3 * window.innerWidth/8 +40,-config.height/2+895 + 3 * window.innerHeight/8);
 }
 
 function update(){
-	if (this.keys.left.isDown) {
+
+	if (this.keys.left.isDown || this.wasd.left.isDown) {
 		this.t.setAngularVelocity(-180);
-	} else if (this.keys.right.isDown) {
+	} else if (this.keys.right.isDown || this.wasd.right.isDown) {
 		this.t.setAngularVelocity(180);
 	} else {
 		this.t.setAngularVelocity(0);
 	}
 	
-	if (this.keys.up.isDown) {
-		this.t.setVelocity(400 * Math.cos(this.t.rotation-Math.PI/2),400 * Math.sin(this.t.rotation-Math.PI/2));
-	} else if (this.keys.down.isDown) {
-		this.t.setVelocity(-400 * Math.cos(this.t.rotation-Math.PI/2),-400 * Math.sin(this.t.rotation-Math.PI/2));
+	if (this.keys.up.isDown || this.wasd.up.isDown) {
+		this.t.setVelocity(800 * Math.cos(this.t.rotation-Math.PI/2),800 * Math.sin(this.t.rotation-Math.PI/2));
+		this.h.setVelocity(800 * Math.cos(this.t.rotation-Math.PI/2),800 * Math.sin(this.t.rotation-Math.PI/2));
+	} else if (this.keys.down.isDown || this.wasd.down.isDown) {
+		this.t.setVelocity(-800 * Math.cos(this.t.rotation-Math.PI/2),-800 * Math.sin(this.t.rotation-Math.PI/2));
+		this.h.setVelocity(-800 * Math.cos(this.t.rotation-Math.PI/2),-800 * Math.sin(this.t.rotation-Math.PI/2));
 	} else {
 		this.t.setVelocity(0,0);
+		this.h.setVelocity(0,0);
 	}
 
 	this.physics.collide(this.t, this.walls);
 
 	if(this.keys.space.isDown){
-		console.log('Tank: ' + this.t.x + ' ,' + this.t.y);
-		console.log('Cam: '+ this.cameras.main.scrollX + ', ' + this.cameras.main.scrollY);
-		console.log(this.t.rotation)
+		//console.log('Tank: ' + this.t.x + ' ,' + this.t.y);
+		//console.log('Cam: '+ this.cameras.main.scrollX + ', ' + this.cameras.main.scrollY);
+		//console.log(this.t.rotation)
+		//console.log(this.input.activePointer.y);
 	}
+
+	this.h.x = this.t.x;
+	this.h.y = this.t.y;
+	if(this.input.activePointer.x >= window.innerWidth/2){
+		this.h.rotation = Math.atan((this.input.activePointer.y - 1/2 * window.innerHeight) / (this.input.activePointer.x - window.innerWidth/2)) + Math.PI/2;
+	} else {
+		this.h.rotation = (Math.atan((this.input.activePointer.y - 1/2 * window.innerHeight) / (this.input.activePointer.x - window.innerWidth/2)) - Math.PI/2);
+	}
+	//update tank head position
 }
