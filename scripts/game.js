@@ -24,6 +24,7 @@ function preload(){
 	this.load.image('tankBody','assets/tankBody.png');
 	this.load.image('tankHead','assets/tankHead.png');
 	this.load.image('tiles','assets/moreTiles.png');
+	this.load.image('bullet','assets/bullet1.png');
 	this.load.tilemapTiledJSON('level1', 'assets/map.json');
 }
 
@@ -92,8 +93,20 @@ function create(){
 		});
 	});
 
+	this.socket.on('shot',function(bullet){
+		console.log('shot');
+		g.bullet = g.physics.add.sprite(bullet.x,bullet.y,'bullet')
+			.setOrigin(0.5,0.5)
+			.setDisplaySize(292/425 * 20,20);
+		g.bullets.add(g.bullet);
+		g.bullet.setVelocity(bullet.v.x,bullet.v.y);
+		g.bullet.rotation = bullet.rotation;
+	});
+
 	this.otherBodies = this.physics.add.group();
 	this.otherHeads = this.physics.add.group();
+
+	this.bullets = this.physics.add.group();
 
 	this.keys = this.input.keyboard.createCursorKeys();
 	this.wasd = {
@@ -102,6 +115,7 @@ function create(){
 	  left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
 	  right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
 	};
+	this.mouse = this.input.activePointer;
 
 	//this.cameras.main.startFollow(this.tankBody,false,1,1,-1 * config.width/2 +3 * window.innerWidth/8 +40,-config.height/2+895 + 3 * window.innerHeight/8);
 }
@@ -109,12 +123,14 @@ function create(){
 function update(){
 
 	if(first && this.tankBody){
+		console.log('cameraFollow');
 		first = false;
 		this.cameras.main.startFollow(this.tankBody);
 	}
 
-	if(this.tankBody){
+	this.bullet;
 
+	if(this.tankBody){
 		//rotation
 		if (this.keys.left.isDown || this.wasd.left.isDown) {
 			this.tankBody.setAngularVelocity(-180);
@@ -126,12 +142,12 @@ function update(){
 		
 		//forwards and backwards movement (both body and head)
 		if (this.keys.up.isDown || this.wasd.up.isDown) {
-			this.tankBody.setVelocity(500 * Math.cos(this.tankBody.rotation-Math.PI/2),500 * Math.sin(this.tankBody.rotation-Math.PI/2));
-			this.tankHead.setVelocity(500 * Math.cos(this.tankBody.rotation-Math.PI/2),500 * Math.sin(this.tankBody.rotation-Math.PI/2));
-		} else if (this.keys.down.isDown || this.wasd.down.isDown) {
-			this.tankBody.setVelocity(-500 * Math.cos(this.tankBody.rotation-Math.PI/2),-500 * Math.sin(this.tankBody.rotation-Math.PI/2));
-			this.tankHead.setVelocity(-500 * Math.cos(this.tankBody.rotation-Math.PI/2),-500 * Math.sin(this.tankBody.rotation-Math.PI/2));
-		} else {
+			this.tankBody.setVelocity(300 * Math.cos(this.tankBody.rotation-Math.PI/2),300 * Math.sin(this.tankBody.rotation-Math.PI/2));
+			this.tankHead.setVelocity(300 * Math.cos(this.tankBody.rotation-Math.PI/2),300 * Math.sin(this.tankBody.rotation-Math.PI/2));
+		} /*else if (this.keys.down.isDown || this.wasd.down.isDown) {
+			this.tankBody.setVelocity(-300 * Math.cos(this.tankBody.rotation-Math.PI/2),-300 * Math.sin(this.tankBody.rotation-Math.PI/2));
+			this.tankHead.setVelocity(-300 * Math.cos(this.tankBody.rotation-Math.PI/2),-300 * Math.sin(this.tankBody.rotation-Math.PI/2));
+		}*/ else {
 			this.tankBody.setVelocity(0,0);
 			this.tankHead.setVelocity(0,0);
 		}
@@ -140,20 +156,45 @@ function update(){
 
 		//debug statements
 		if(this.keys.space.isDown){
-			console.log('Tank: ' + this.tankBody.x + ' ,' + this.tankBody.y);
+			//console.log('Tank: ' + this.tankBody.velocity.x + ', ' + this.tankBody.velocity.y);
 			//console.log('Cam: '+ this.cameras.main.scrollX + ', ' + this.cameras.main.scrollY);
 			//console.log(this.tankBody.rotation)
-			//console.log(this.input.activePointer.y);
+			//console.log(this.mouse.y);
 		}
 
+		//update tank head rotation
 		this.tankHead.x = this.tankBody.x;
 		this.tankHead.y = this.tankBody.y;
-		if(this.input.activePointer.x >= window.innerWidth/2){
-			this.tankHead.rotation = Math.atan((this.input.activePointer.y - 1/2 * window.innerHeight) / (this.input.activePointer.x - window.innerWidth/2)) + Math.PI/2;
+		if(this.mouse.x >= window.innerWidth/2){
+			this.tankHead.rotation = Math.atan((this.mouse.y - 1/2 * window.innerHeight) / (this.mouse.x - window.innerWidth/2)) + Math.PI/2;
 		} else {
-			this.tankHead.rotation = (Math.atan((this.input.activePointer.y - 1/2 * window.innerHeight) / (this.input.activePointer.x - window.innerWidth/2)) - Math.PI/2);
+			this.tankHead.rotation = (Math.atan((this.mouse.y - 1/2 * window.innerHeight) / (this.mouse.x - window.innerWidth/2)) - Math.PI/2);
 		}
-		//update tank head rotation
+		
+		//Add Bullet and fire
+		if(this.mouse.justDown){
+			console.log('hi');
+			let vel = {
+				x:2000 * Math.cos(this.tankHead.rotation - Math.PI/2),
+				y:2000 * Math.sin(this.tankHead.rotation - Math.PI/2)
+			};
+			this.bullet = this.physics.add.sprite(this.tankHead.x,this.tankHead.y,'bullet')
+				.setDisplaySize(292/425 * 20,20)
+				.setOrigin(0.5,0.5); 
+			this.bullets.add(this.bullet);
+			this.bullet.depth = 0;
+			this.bullet.rotation = this.tankHead.rotation;
+			this.bullet.setVelocity(2000 * Math.cos(this.tankHead.rotation - Math.PI/2),2000 * Math.sin(this.tankHead.rotation - Math.PI/2));
+			this.socket.emit('shot',room,{
+				x:this.bullet.x,
+				y:this.bullet.y,
+				v:{
+					x:vel.x,
+					y:vel.y
+				},
+				rotation:this.bullet.rotation
+			});
+		}
 
 		//send server updates
 
@@ -186,6 +227,7 @@ function update(){
 			rotation: this.tankBody.rotation,
 			aim: this.tankHead.rotation
 		}
+
 	}
 }
 
@@ -201,6 +243,9 @@ function addMe(tis,player){
 
 	tis.tankBody.id = player.id;
 	tis.tankHead.id = player.id;
+
+	tis.tankBody.depth = 1;
+	tis.tankHead.depth = 2;
 }
 
 function addOtherPlayer(tis,player){
@@ -215,6 +260,9 @@ function addOtherPlayer(tis,player){
 	tis.otherHead.id = player.id;
 	tis.otherBodies.add(tis.otherBody);
 	tis.otherHeads.add(tis.otherHead);
+
+	tis.otherBody.depth = 1;
+	tis.otherHead.depth = 2;
 }
 
 function isEquivalent(a, b) {
@@ -247,4 +295,8 @@ function isEquivalent(a, b) {
     // If we made it this far, objects
     // are considered equivalent
     return true;
+}
+function resizeCam(g){
+	console.log('resizeCam');
+	first = true;
 }

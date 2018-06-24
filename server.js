@@ -15,6 +15,10 @@ server.listen(process.env.PORT || port, function(){
 	console.log('Listening on '+server.address().port);
 });
 
+require('dns').lookup(require('os').hostname(), function (err, add, fam) {
+  console.log('addr: '+add);
+})
+
 io.on('connection', function(socket){
 	console.log('A client has connected');
 	console.log("The Client's ID is: " + socket.id);
@@ -63,5 +67,10 @@ io.on('connection', function(socket){
 		DBplayer.rotation = player.rotation;
 		DBplayer.aim = player.aim;
 		socket.to(room.toString()).emit('moveUpdate',DBplayer);//ID is already in DBplayer as DBplayer.id
+	});
+
+	socket.on('shot',function(room,bullet){
+		console.log('shot');
+		socket.to(room).emit('shot',bullet);
 	});
 });
